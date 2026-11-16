@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IRIS – Investment Research & Insight System</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+color-scheme:dark;--bg:#121212;--card:#1f1f1f;--field:#161616;--line:#2c2c2c;--text:#f2f2f2;--mute:#8b8b8b;--accent:#0ba16b;--accent-bg:#103d2d;--up:#17b97a;--down:#ee4a49;--warn:#f0a020;--chip:#2a2a2a}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:20px;margin:0 0 2px;font-weight:600}
+.sub{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button,.btn{font:inherit;color:var(--text);background:var(--chip);border:1px solid var(--line);border-radius:9px;padding:7px 13px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabs{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--mute);padding:8px 2px}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.warn{color:var(--warn)}
+tbody tr:hover td{background:#262626}
+.desc{color:var(--mute);margin:0 0 12px;min-height:21px}
+.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+label{display:flex;flex-direction:column;gap:3px;color:var(--mute);font-size:12px}
+input[type=number],input[type=text],textarea{font:inherit;color:var(--text);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:6px 9px;width:100%}
+textarea{min-height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.scroll{overflow:auto;max-height:calc(100vh - 460px);min-height:240px}
+thead th{position:sticky;top:0;z-index:1;background:var(--card);box-shadow:0 1px 0 var(--line)}
+table{border-collapse:collapse;width:100%;min-width:700px;font-variant-numeric:tabular-nums}
+th{text-align:left;color:var(--mute);font-weight:500;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+th.num,td.num{text-align:right}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+td small{display:block;color:var(--mute);font-size:12px}
+.code{font-weight:600}
+.up{color:var(--up)}.down{color:var(--down)}.mute{color:var(--mute)}
+.empty{padding:28px 8px;text-align:center;color:var(--mute)}
+.banner{border:1px dashed var(--accent);color:var(--accent);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+details summary{cursor:pointer;color:var(--accent)}
+details p,details li{color:var(--mute);margin:6px 0}
+.status{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>IRIS</h1>
+  <p class="sub">Investment Research &amp; Insight System. Screener saham IDX untuk persiapan esok hari, dihitung di browser Anda dari data harian penutupan.</p>
+
+  <div class="card">
+    <div class="status" id="status" style="margin-bottom:10px">Belum ada data.</div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="desc" id="desc"></p>
+    <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    <div class="params">
+      <label>Pengali volume (×)<input type="number" id="pMult" value="2" min="1" step="0.1"></label>
+      <label>Pembanding volume (N hari sebelumnya)<input type="number" id="pLook" value="1" min="1" step="1"></label>
+      <label>Periode spike (hari)<input type="number" id="pPer" value="5" min="2" step="1"></label>
+      <label>MA cepat / lambat<span class="row" style="flex-wrap:nowrap"><input type="number" id="pMa1" value="20" min="3"><input type="number" id="pMa2" value="50" min="5"></span></label>
+      <label>Koreksi dari puncak (%)<input type="number" id="pDD" value="8" min="1" step="0.5"></label>
+      <label>Min. nilai/hari (juta Rp)<input type="number" id="pMinVal" value="0" min="0" step="100"></label>
+      <label>Dekat High: maks. selisih (poin %)<input type="number" id="pHi" value="1" min="0" step="0.1"></label>
+      <label>Jauh dari Low: min. selisih (poin %)<input type="number" id="pLo" value="3" min="0" step="0.1"></label>
+      <label>Batas ARB manual (%), kosong = otomatis<input type="number" id="pArb" value="" min="0" step="0.5"></label>
+      <label>Tanpa Shadow Atas: maks. tick<input type="number" id="pTick" value="5" min="0" step="1"></label>
+      <label>Tanpa Shadow Atas: min. kenaikan (%)<input type="number" id="pChg" value="7" step="0.5"></label>
+      <label>Jarum Bawah: min. % dari range<input type="number" id="pWick" value="50" min="0" max="100" step="5"></label>
+      <label>Dua tab candle: min. kriteria (dari 2, Bid tidak dihitung)<input type="number" id="pMinK" value="2" min="1" max="2" step="1"></label>
+    </div>
+    <details style="margin-top:12px">
+      <summary>Format data &amp; cara baca hasil</summary>
+      <p><b>Sumber data:</b> semua file Ringkasan Saham IDX di folder "Ringkasan Saham" dibaca otomatis lewat serve.py. Tanggal dibaca dari 8 digit di nama file, misalnya Ringkasan_Saham-20261106. Kolom yang dibutuhkan: <b>Tanggal, Kode, Close, Volume</b>. Kolom opsional: Nama, Open, High, Low, Nilai (nilai transaksi dalam rupiah). Pemisah koma, titik koma, atau tab. Nama kolom Indonesia seperti Penutupan, Tertinggi, Terendah juga dikenali. Disarankan minimal 60 hari data agar MA50 terhitung.</p>
+      <ul>
+        <li><b>Rasio Vol</b>: volume hari terakhir dibanding rata-rata volume N hari sebelumnya.</li>
+        <li><b>Avg Nilai/hari</b>: rata-rata nilai transaksi N hari terakhir, dalam juta rupiah. Jika kolom Nilai tidak ada, dihitung dari Close × Volume.</li>
+        <li><b>Strong Close</b>: ✓ bila posisi close di rentang High–Low ≥ 80% dan close tidak lebih dari 3% di atas VWAP. VWAP diambil dari Nilai ÷ Volume, atau (H+L+C)/3 bila Nilai kosong. Tanpa High/Low, kolom ini kosong.</li>
+        <li><b>Analisa Penutupan</b>: Dekat High dan Jauh dari Low dihitung dari selisih High/Low terhadap Close dalam poin persen dari harga sebelumnya; Close &gt; VWAP memakai Nilai ÷ Volume; Close di Bid berarti harga Close sama dengan Bid terbaik di file IDX. Skor = jumlah kriteria yang terpenuhi.</li>
+        <li><b>Tanpa Shadow Atas</b> (hanya saham yang naik lebih dari batas kenaikan di panel parameter, default 7%): shadow atas = jumlah tick (fraksi harga BEI) dari Close naik ke High. <b>Jarum Bawah</b>: (min(Open,Close) − Low) ÷ (High − Low). Open Price kosong di file IDX untuk sebagian saham, jadi saham itu tidak bisa dinilai di tab Jarum Bawah. Keduanya juga memakai Close &gt; VWAP dan Close di Bid.</li>
+        <li><b>ARB 3 Hari</b>: tiga hari perdagangan terakhir di file semuanya ARB (Close = Low dan turun sesuai batas BEI hari itu). Butuh minimal 3 file harian berurutan. Volume ditampilkan dalam lot (lembar ÷ 100).</li>
+        <li>Volume dibaca apa adanya (lembar atau lot, asal konsisten dalam satu file).</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const TABS=[
+  {id:"marubozu",label:"Marubozu"},
+  {id:"hammer",label:"Hammer"},
+  {id:"today",label:"Volume Spike"},
+  {id:"arb",label:"ARB 3 Hari"},
+  {id:"close",label:"Analisa Penutupan"},
+  {id:"period",label:"Spike Periode"},
+  {id:"uptrend",label:"Uptrend MA"},
+  {id:"upvol",label:"Uptrend + Vol Spike"},
+  {id:"corr",label:"Koreksi/Distribusi"},
+];
+let DB=null, sortKey=null, sortDir=-1;
+let tab="marubozu";
+try{const s=localStorage.getItem("irisTab");if(TABS.some(t=>t.id===s))tab=s}catch(e){}
+const $=id=>document.getElementById(id);
+const fmt=(n,d=0)=>n==null||!isFinite(n)?"–":n.toLocaleString("id-ID",{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const P=()=>({mult:+$("pMult").value||2,look:Math.max(1,+$("pLook").value||1),per:Math.max(2,+$("pPer").value||5),ma1:+$("pMa1").value||20,ma2:+$("pMa2").value||50,dd:(+$("pDD").value||8)/100,minVal:+$("pMinVal").value||0,hi:$("pHi").value===""?1:+$("pHi").value,lo:$("pLo").value===""?3:+$("pLo").value,arb:$("pArb").value===""?0:+$("pArb").value,tick:$("pTick").value===""?5:+$("pTick").value,wick:$("pWick").value===""?50:+$("pWick").value,minK:$("pMinK").value===""?2:+$("pMinK").value,chgMin:$("pChg").value===""?7:+$("pChg").value});
+
+/* ---------- parsing ---------- */
+const ALIAS={date:["date","tanggal","tgl","datetime"],code:["code","kode","ticker","symbol","stockcode","kodesaham"],name:["name","nama","companyname","namaperusahaan"],open:["open","pembukaan","openprice"],high:["high","tertinggi","highprice"],low:["low","terendah","lowprice"],close:["close","penutupan","closeprice","last","harga"],volume:["volume","vol"],value:["value","nilai","valuetransaksi","nilaitransaksi"],prev:["sebelumnya","previous","prevclose"],bid:["bid","bidprice"]};
+function num(s){if(typeof s==="number")return s;if(s==null)return NaN;s=String(s).trim().replace(/\s/g,"");if(s==="")return NaN;
+ if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,"").replace(",",".");
+ else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,"");
+ else s=s.replace(",",".");
+ return parseFloat(s)}
+function normDate(s){s=String(s).trim();let m;
+ if(/^\d{8}$/.test(s))return s;
+ if(m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/))return m[1]+m[2].padStart(2,"0")+m[3].padStart(2,"0");
+ if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/))return m[3]+m[2].padStart(2,"0")+m[1].padStart(2,"0");
+ return null}
+/* ---------- analisis ---------- */
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+function dayValue(r,hasValue){return isFinite(r.val)&&hasValue?r.val:r.c*r.v}
+function analyze(s,p,hasValue,last){
+ const R=s.rows;const L=R.length-1;if(R[L].d!==last||L<1)return null;
+ const t=R[L],prev=R[L-1];
+ const ratioAt=i=>{const k=Math.min(p.look,i);if(k<1)return null;const a=mean(R.slice(i-k,i).map(r=>r.v));return a>0?R[i].v/a:null};
+ const k=Math.min(p.look,L);
+ const out={code:s.code,name:s.name,close:t.c,chg:(t.c/prev.c-1)*100,ratio:ratioAt(L),avgVal:mean(R.slice(Math.max(0,L+1-Math.max(p.look,20))).map(r=>dayValue(r,hasValue)))/1e6};
+ const hl=isFinite(t.h)&&isFinite(t.l)&&t.h>0&&t.l>0;
+ if(hl){out.pos=t.h>t.l?(t.c-t.l)/(t.h-t.l)*100:100;
+  const vw=isFinite(t.val)&&hasValue&&t.v>0?t.val/t.v:(t.h+t.l+t.c)/3;out.vd=(t.c/vw-1)*100;
+  out.strong=out.pos>=80&&out.vd<=3}
+ // spike periode
+ let best=null;for(let i=Math.max(1,L-p.per+1);i<=L;i++){const r=ratioAt(i);if(r!=null&&R[i].c>R[i-1].c&&(!best||r>best.r))best={r,i}}
+ out.periodBest=best;
+ // MA
+ const ma=n=>L+1>=n?mean(R.slice(L+1-n).map(r=>r.c)):null;
+ out.ma1=ma(p.ma1);out.ma2=ma(p.ma2);
+ out.up=out.ma1!=null&&out.ma2!=null&&t.c>out.ma1&&out.ma1>out.ma2;
+ // spike dalam periode, untuk uptrend+vol
+ out.recentSpike=best&&best.r>=p.mult;
+ // koreksi/distribusi
+ const hi=Math.max(...R.slice(Math.max(0,L-Math.max(p.look,20)+1)).map(r=>isFinite(r.h)?r.h:r.c));
+ out.fromHigh=(t.c/hi-1)*100;
+ out.korek=t.c<=hi*(1-p.dd);
+ out.distri=out.chg<0&&out.ratio!=null&&out.ratio>=p.mult;
+ return out}
+
+const base=p=>p.look===1?"volume hari sebelumnya":`rata-rata volume ${p.look} hari sebelumnya`;
+const DESC={
+ marubozu:(l,p)=>`Saham yang naik lebih dari ${p.chgMin}% (${l}) dan memenuhi minimal ${Math.min(3,p.minK)} dari 3 kriteria: shadow atas \u2264 ${p.tick} tick dari High; Close > VWAP; Close = Bid.`,
+ hammer:(l,p)=>`Saham dengan minimal ${Math.min(3,p.minK)} dari 3 kriteria (${l}): jarum bawah \u2265 ${p.wick}% dari range High\u2013Low (butuh Open Price); Close > VWAP; Close = Bid.`,
+ arb:(l,p)=>`Saham yang ditutup di ARB tiga hari perdagangan berturut-turut (hingga ${l}). ARB dikenali bila Close = Low dan penurunan mencapai batas BEI pada tanggal itu ${p.arb>0?`(manual ${p.arb}%)`:"(otomatis: 15% sampai 18 Okt 2026, 7% 19 Okt–31 Des 2026, 35/25/20% sesuai rentang harga mulai 1 Jan 2027)"}.`,
+ close:(l,p)=>`Saham yang memenuhi minimal satu dari empat kriteria penutupan (${l}). Selisih dalam poin persen terhadap harga sebelumnya. Dekat High: selisih ≤ ${p.hi}; Jauh dari Low: selisih ≥ ${p.lo}.`,
+ today:(l,p)=>`Volume hari terakhir (${l}) ≥ ${p.mult}× ${base(p)}, dan harga lebih tinggi dari penutupan hari sebelumnya.`,
+ period:(l,p)=>`Dalam ${p.per} hari terakhir pernah ada hari harga naik dengan volume ≥ ${p.mult}× ${base(p)}.`,
+ uptrend:(l,p)=>`Close di atas MA${p.ma1}, dan MA${p.ma1} di atas MA${p.ma2}.`,
+ upvol:(l,p)=>`Uptrend MA${p.ma1}/MA${p.ma2} dan ada spike volume saat harga naik dalam ${p.per} hari terakhir.`,
+ corr:(l,p)=>`Turun ≥ ${p.dd*100}% dari puncak ${Math.max(p.look,20)} hari (koreksi), atau harga turun hari ini dengan volume ≥ ${p.mult}× normal (distribusi).`
+};
+function select(rows,p){
+ let f;
+ if(tab==="today")f=rows.filter(r=>r.ratio>=p.mult&&r.chg>0);
+ else if(tab==="period")f=rows.filter(r=>r.recentSpike);
+ else if(tab==="uptrend")f=rows.filter(r=>r.up);
+ else if(tab==="upvol")f=rows.filter(r=>r.up&&r.recentSpike);
+ else f=rows.filter(r=>r.korek||r.distri);
+ return f.filter(r=>r.avgVal>=p.minVal)}
+
+/* ---------- render ---------- */
+function render(){
+ const tb=$("tabs");tb.innerHTML="";
+ TABS.forEach(t=>{const b=document.createElement("button");b.className="tab";b.role="tab";b.textContent=t.label;b.setAttribute("aria-selected",t.id===tab);b.onclick=()=>{tab=t.id;sortKey=null;render()};tb.appendChild(b)});
+ const p=P();
+ const head=$("tbl").tHead,body=$("tbl").tBodies[0];
+ if(!DB){$("desc").textContent="";head.innerHTML="";body.innerHTML='<tr><td class="empty">Unggah atau tempel data harian saham, atau muat data contoh untuk mencoba.</td></tr>';return}
+ $("desc").textContent=DESC[tab](fmtD(DB.last),p);
+ if(tab==="close")return renderClose(p,head,body);
+ if(tab==="arb")return renderArb(p,head,body);
+ if(tab==="marubozu"||tab==="hammer")return renderCandle(p,head,body);
+ const all=DB.stocks.map(s=>analyze(s,p,DB.hasValue,DB.last)).filter(Boolean);
+ let rows=select(all,p);
+ const dKey=tab==="period"?"periodR":tab==="uptrend"?"avgVal":tab==="corr"?"fromHigh":"ratio";
+ rows.forEach(r=>r.periodR=r.periodBest?r.periodBest.r:null);
+ const key=sortKey||dKey,dir=sortKey?sortDir:(tab==="corr"?1:-1);
+ rows.sort((a,b)=>((a[key]??-Infinity)-(b[key]??-Infinity))*dir*(key==="code"?1:1));
+ if(key==="code")rows.sort((a,b)=>a.code<b.code?-dir:dir);
+ const cols=[["code","Kode"],["close","Close","num"],["chg","Chg","num"],["ratio","Rasio Vol","num"],["avgVal","Avg Nilai/hari","num"],["pos","Strong Close"],["extra","Catatan"]];
+ head.innerHTML="<tr>"+cols.map(c=>`<th class="${c[2]||""}" data-k="${c[0]}">${c[1]}${key===c[0]?(dir<0?" ↓":" ↑"):""}</th>`).join("")+"</tr>";
+ head.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(k==="extra")return;sortDir=sortKey===k?-sortDir:-1;sortKey=k;render()});
+ if(!rows.length){body.innerHTML=`<tr><td colspan="7" class="empty">${(tab==="uptrend"||tab==="upvol")&&DB.days<p.ma2?`Butuh minimal ${p.ma2} hari data untuk MA${p.ma2} (saat ini ${DB.days} hari). `:""}Tidak ada saham yang memenuhi kriteria ini. Coba turunkan pengali volume atau nilai minimum per hari.</td></tr>`;return}
+ body.innerHTML=rows.map(r=>{
+  const sc=r.pos==null?'<span class="mute">data H/L belum ada</span>':`<span class="${r.strong?"up":"down"}">${r.strong?"✓":"✗"}</span> ${fmt(r.pos)}% / VWAP Δ${fmt(r.vd,1)}%`;
+  let ex="";
+  if(tab==="period"&&r.periodBest)ex=`Spike ${fmt(r.periodBest.r,1)}× pada ${fmtD(DB.stocks.find(s=>s.code===r.code).rows[r.periodBest.i].d)}`;
+  else if(tab==="uptrend"||tab==="upvol")ex=`MA${p.ma1} ${fmt(r.ma1)} / MA${p.ma2} ${fmt(r.ma2)}`;
+  else if(tab==="corr")ex=(r.korek?`Koreksi ${fmt(r.fromHigh,1)}% dari puncak`:"")+(r.korek&&r.distri?"; ":"")+(r.distri?"Distribusi (turun + volume besar)":"");
+  return `<tr><td><span class="code">${esc(r.code)}</span>${r.name?`<small>${esc(r.name)}</small>`:""}</td><td class="num">${fmt(r.close)}</td><td class="num ${r.chg>=0?"up":"down"}">${r.chg>=0?"+":""}${fmt(r.chg,2)}%</td><td class="num warn">${r.ratio==null?"–":fmt(r.ratio,1)+"×"}</td><td class="num">${fmt(r.avgVal)} jt</td><td>${sc}</td><td class="mute">${ex}</td></tr>`}).join("");
+}
+function analyzeClose(s,p,last){
+ const R=s.rows,L=R.length-1,t=R[L];
+ if(t.d!==last||!(t.v>0)||!(t.h>0)||!(t.l>0))return null;
+ const pv=isFinite(t.pv)&&t.pv>0?t.pv:(L>0?R[L-1].c:NaN);if(!(pv>0))return null;
+ const dHi=(t.h-t.c)/pv*100,dLo=(t.c-t.l)/pv*100;
+ const vw=isFinite(t.val)&&t.val>0?t.val/t.v:(t.h+t.l+t.c)/3;
+ const c1=dHi<=p.hi,c2=t.c>vw,c3=isFinite(t.bid)&&t.bid>0?t.c===t.bid:null,c4=dLo>=p.lo;
+ return {code:s.code,name:s.name,close:t.c,chg:(t.c/pv-1)*100,dHi,dLo,c1,c2,c3,c4,vd:(t.c/vw-1)*100,score:[c1,c2,c3,c4].filter(x=>x===true).length,avgVal:(isFinite(t.val)?t.val:t.c*t.v)/1e6}}
+const mk=(ok,txt)=>ok===null?'<span class="mute" title="data tidak ada">–</span>':`<span class="${ok?"up":"down"}">${ok?"✓":"✗"}</span> ${txt}`;
+function renderClose(p,head,body){
+ const all=DB.stocks.map(s=>analyzeClose(s,p,DB.last)).filter(Boolean);
+ const rows=all.filter(r=>r.score>0&&r.avgVal>=p.minVal);
+ const key=sortKey||"score",dir=sortKey?sortDir:-1;
+ rows.sort((a,b)=>key==="code"?(a.code<b.code?-dir:dir):((a[key]??-Infinity)-(b[key]??-Infinity))*dir||(b.chg-a.chg));
+ $("desc").textContent+=` Ditemukan ${rows.length} saham.`+(all.length&&all.every(r=>r.c3===null)?" Data Bid tidak ditemukan, unggah ulang file Ringkasan Saham IDX agar kriteria Bid terbaca.":"");
+ const cols=[["code","Kode"],["close","Close","num"],["chg","Chg","num"],["dHi","Dekat High (selisih)"],["vd","Close > VWAP"],["c3","Close di Bid"],["dLo","Jauh dari Low (selisih)"],["score","Skor","num"]];
+ head.innerHTML="<tr>"+cols.map(c=>`<th class="${c[2]||""}" data-k="${c[0]}">${c[1]}${key===c[0]?(dir<0?" ↓":" ↑"):""}</th>`).join("")+"</tr>";
+ head.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortKey===k?-sortDir:-1;sortKey=k;render()});
+ if(!rows.length){body.innerHTML='<tr><td colspan="8" class="empty">Tidak ada saham yang memenuhi minimal satu kriteria.</td></tr>';return}
+ body.innerHTML=rows.map(r=>`<tr><td><span class="code">${esc(r.code)}</span>${r.name?`<small>${esc(r.name)}</small>`:""}</td><td class="num">${fmt(r.close)}</td><td class="num ${r.chg>=0?"up":"down"}">${r.chg>=0?"+":""}${fmt(r.chg,2)}%</td><td>${mk(r.c1,fmt(r.dHi,2)+"%")}</td><td>${mk(r.c2,(r.c2?"Ya":"Tidak")+` <span class="mute">${fmt(r.vd,1)}%</span>`)}</td><td>${mk(r.c3,r.c3?"Ya":"Tidak")}</td><td>${mk(r.c4,fmt(r.dLo,2)+"%")}</td><td class="num">${r.score}/${r.c3===null?3:4}</td></tr>`).join("")}
+const tickOf=p=>p<200?1:p<500?2:p<2000?5:p<5000?10:25;
+function arbRule(d,pv){
+ if(pv<=10)return {abs:1};
+ if(d>="20270101")return {pct:pv<=200?35:pv<=5000?25:20};
+ if(d>="20261019")return {pct:7};
+ return {pct:15}}
+function isArb(t,pv,p){
+ if(!(t.v>0)||!(t.l>0)||!(pv>0)||t.c!==t.l)return false;
+ const r=p.arb>0?{pct:p.arb}:arbRule(t.d,pv);
+ if(r.abs)return t.c<=pv-r.abs;
+ return t.c<pv*(1-r.pct/100)+tickOf(t.c)-1e-9}
+function analyzeArb(s,p,last){
+ const R=s.rows,L=R.length-1;if(L<2||R[L].d!==last)return null;
+ const o=[];
+ for(let k=0;k<3;k++){const i=L-2+k,t=R[i];const pv=isFinite(t.pv)&&t.pv>0?t.pv:(i>0?R[i-1].c:NaN);
+  if(!isArb(t,pv,p))return null;o.push({t,pv})}
+ const v=o.map(x=>x.t.v);
+ const c=o.map(x=>(x.t.c/x.pv-1)*100),t=o[2].t;
+ return {code:s.code,name:s.name,close:t.c,tot:(t.c/o[0].pv-1)*100,c0:c[0],c1:c[1],c2:c[2],v0:v[0]/100,v1:v[1]/100,v2:v[2]/100,thin:(v[2]/v[0]-1)*100,avgVal:(isFinite(t.val)?t.val:t.c*t.v)/1e6}}
+function renderArb(p,head,body){
+ if(DB.days<3){head.innerHTML="";body.innerHTML=`<tr><td class="empty">Butuh minimal 3 hari data (saat ini ${DB.days} hari).</td></tr>`;return}
+ const ds=Object.keys(DAYS).sort().slice(-3),lb=d=>d.slice(6)+"/"+d.slice(4,6);
+ const rows=DB.stocks.map(s=>analyzeArb(s,p,DB.last)).filter(r=>r&&r.avgVal>=p.minVal);
+ const key=sortKey||"tot",dir=sortKey?sortDir:1;
+ rows.sort((a,b)=>key==="code"?(a.code<b.code?-dir:dir):((a[key]??Infinity)-(b[key]??Infinity))*dir);
+ $("desc").textContent+=` Ditemukan ${rows.length} saham.`;
+ const cols=[["code","Kode"],["close","Close","num"],["tot","Total 3 hari","num"],["c0",lb(ds[0])+" (Chg, vol lot)","num"],["c1",lb(ds[1])+" (Chg, vol lot)","num"],["c2",lb(ds[2])+" (Chg, vol lot)","num"],["thin","Volume vs hari pertama","num"]];
+ head.innerHTML="<tr>"+cols.map(c=>`<th class="${c[2]||""}" data-k="${c[0]}">${c[1]}${key===c[0]?(dir<0?" \u2193":" \u2191"):""}</th>`).join("")+"</tr>";
+ head.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortKey===k?-sortDir:-1;sortKey=k;render()});
+ if(!rows.length){body.innerHTML='<tr><td colspan="7" class="empty">Tidak ada saham yang ARB 3 hari berturut-turut.</td></tr>';return}
+ const cell=(c,v)=>`<td class="num"><span class="down">${fmt(c,2)}%</span><small>${fmt(Math.round(v))} lot</small></td>`;
+ body.innerHTML=rows.map(r=>`<tr><td><span class="code">${esc(r.code)}</span>${r.name?`<small>${esc(r.name)}</small>`:""}</td><td class="num">${fmt(r.close)}</td><td class="num down">${fmt(r.tot,2)}%</td>${cell(r.c0,r.v0)}${cell(r.c1,r.v1)}${cell(r.c2,r.v2)}<td class="num warn">${fmt(r.thin,0)}%</td></tr>`).join("")}
+function ticksUp(a,b){let n=0,x=a;while(x<b&&n<1000){x+=tickOf(x);n++}return n}
+function analyzeCandle(s,p,last){
+ const R=s.rows,L=R.length-1,t=R[L];
+ if(t.d!==last||!(t.v>0)||!(t.h>0)||!(t.l>0))return null;
+ const pv=isFinite(t.pv)&&t.pv>0?t.pv:(L>0?R[L-1].c:NaN);
+ const up=ticksUp(t.c,t.h),rng=t.h-t.l;
+ const vw=isFinite(t.val)&&t.val>0?t.val/t.v:(t.h+t.l+t.c)/3;
+ const wick=isFinite(t.o)&&t.o>0&&rng>0?(Math.min(t.o,t.c)-t.l)/rng*100:null;
+ const c1=up<=p.tick,c2=t.c>vw,c3=isFinite(t.bid)&&t.bid>0?t.c===t.bid:null,c4=wick===null?null:wick>=p.wick;
+ return {code:s.code,name:s.name,close:t.c,chg:pv>0?(t.c/pv-1)*100:NaN,up,vd:(t.c/vw-1)*100,wick,c1,c2,c3,c4,score:[c1,c2,c3,c4].filter(x=>x===true).length,max:[c1,c2,c3,c4].filter(x=>x!==null).length,avgVal:(isFinite(t.val)?t.val:t.c*t.v)/1e6}}
+function renderCandle(p,head,body){
+ const wk=tab==="hammer",ks=wk?["c4","c2"]:["c1","c2"],kd=[...ks,"c3"],minK=Math.min(2,Math.max(1,p.minK));
+ const all=DB.stocks.map(s=>analyzeCandle(s,p,DB.last)).filter(Boolean);
+ all.forEach(r=>{r.fscore=ks.filter(k=>r[k]===true).length;r.score=kd.filter(k=>r[k]===true).length;r.max=kd.filter(k=>r[k]!==null).length});
+ const rows=all.filter(r=>r.fscore>=minK&&r.avgVal>=p.minVal&&(wk||r.chg>p.chgMin));
+ const key=sortKey||"score",dir=sortKey?sortDir:-1;
+ rows.sort((a,b)=>key==="code"?(a.code<b.code?-dir:dir):((a[key]??-Infinity)-(b[key]??-Infinity))*dir||(wk?(b.wick??-1)-(a.wick??-1):a.up-b.up));
+ const noOpen=wk?all.filter(r=>r.c4===null).length:0;
+ $("desc").textContent+=` Ditemukan ${rows.length} saham.`+(noOpen?` ${noOpen} saham tanpa Open Price tidak bisa dinilai.`:"")+(all.length&&all.every(r=>r.c3===null)?" Data Bid tidak ditemukan.":"");
+ const cols=[["code","Kode"],["close","Close","num"],["chg","Chg","num"],wk?["wick","Jarum bawah"]:["up","Shadow atas"],["vd","Close > VWAP"],["c3","Close di Bid"],["score","Skor","num"]];
+ head.innerHTML="<tr>"+cols.map(c=>`<th class="${c[2]||""}" data-k="${c[0]}">${c[1]}${key===c[0]?(dir<0?" \u2193":" \u2191"):""}</th>`).join("")+"</tr>";
+ head.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortKey===k?-sortDir:-1;sortKey=k;render()});
+ if(!rows.length){body.innerHTML=`<tr><td colspan="7" class="empty">Tidak ada saham yang memenuhi minimal ${minK} kriteria${wk?"":` dan naik lebih dari ${p.chgMin}%`}.</td></tr>`;return}
+ body.innerHTML=rows.map(r=>`<tr><td><span class="code">${esc(r.code)}</span>${r.name?`<small>${esc(r.name)}</small>`:""}</td><td class="num">${fmt(r.close)}</td><td class="num ${r.chg>=0?"up":"down"}">${r.chg>=0?"+":""}${fmt(r.chg,2)}%</td><td>${wk?mk(r.c4,fmt(r.wick,0)+"%"):mk(r.c1,r.up+" tick")}</td><td>${mk(r.c2,(r.c2?"Ya":"Tidak")+` <span class="mute">${fmt(r.vd,1)}%</span>`)}</td><td>${mk(r.c3,r.c3?"Ya":"Tidak")}</td><td class="num">${r.score}/${r.max}</td></tr>`).join("")}
+function fmtD(d){return d.slice(0,4)+"-"+d.slice(4,6)+"-"+d.slice(6)}
+
+/* ---------- data ---------- */
+const DAYS={};
+const idbOpen=()=>new Promise((res,rej)=>{const r=indexedDB.open("iris",1);r.onupgradeneeded=()=>r.result.createObjectStore("days",{keyPath:"d"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbAll=()=>idbOpen().then(db=>new Promise((res,rej)=>{const q=db.transaction("days").objectStore("days").getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}));
+const idbPut=a=>idbOpen().then(db=>new Promise((res,rej)=>{const t=db.transaction("days","readwrite"),s=t.objectStore("days");a.forEach(x=>s.put(x));t.oncomplete=res;t.onerror=()=>rej(t.error)}));
+const idbClear=()=>idbOpen().then(db=>new Promise((res,rej)=>{const t=db.transaction("days","readwrite");t.objectStore("days").clear();t.oncomplete=res;t.onerror=()=>rej(t.error)}));
+function daysFromStocks(st){const m={};st.forEach(s=>s.rows.forEach(r=>{(m[r.d]=m[r.d]||[]).push([s.code,s.name,r.o,r.h,r.l,r.c,r.v,r.val,r.pv,r.bid])}));return m}
+function textToAOA(t){const L=t.replace(/\r/g,"").split("\n").filter(l=>l.trim());const sep=[";","\t",","].map(c=>[c,L[0].split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];return L.map(l=>l.split(sep))}
+function toRows(aoa,fd){
+ const nm=c=>String(c).toLowerCase().replace(/[^a-z]/g,"");
+ const hi=aoa.findIndex(r=>r.some(c=>ALIAS.code.includes(nm(c)))&&r.some(c=>ALIAS.close.includes(nm(c))));
+ if(hi<0)throw new Error("baris judul kolom (Kode, Penutupan/Close, Volume) tidak ditemukan");
+ const head=aoa[hi].map(nm),idx={};for(const k in ALIAS)idx[k]=head.findIndex(h=>ALIAS[k].includes(h));
+ if(idx.volume<0)throw new Error("kolom Volume tidak ditemukan");
+ if(!fd&&idx.date<0)throw new Error("tanggal tidak diketahui, tambahkan 8 digit tanggal (YYYYMMDD) pada nama file");
+ const m={};
+ for(let i=hi+1;i<aoa.length;i++){const c=aoa[i];const code=String(c[idx.code]||"").trim().toUpperCase();const d=fd||normDate(c[idx.date]);const close=num(c[idx.close]),vol=num(c[idx.volume]);
+  if(!d||!code||!(close>0)||!(vol>=0))continue;const g=k=>idx[k]>=0?num(c[idx[k]]):NaN;
+  (m[d]=m[d]||[]).push([code,idx.name>=0?String(c[idx.name]||"").trim():"",g("open"),g("high"),g("low"),close,vol,g("value"),g("prev"),g("bid")])}
+ if(!Object.keys(m).length)throw new Error("tidak ada baris valid");
+ return m}
+function buildDB(){const ds=Object.keys(DAYS).sort();if(!ds.length)return null;const m={};let hv=false;
+ ds.forEach(d=>DAYS[d].forEach(r=>{const s=m[r[0]]||(m[r[0]]={code:r[0],name:"",rows:[]});if(r[1])s.name=r[1];if(isFinite(r[7]))hv=true;s.rows.push({d,o:r[2],h:r[3],l:r[4],c:r[5],v:r[6],val:r[7],pv:r[8],bid:r[9]})}));
+ return {stocks:Object.values(m),last:ds[ds.length-1],bad:0,hasValue:hv,days:ds.length}}
+async function addDays(m,extra){Object.keys(m).forEach(d=>DAYS[d]=m[d]);try{await idbPut(Object.keys(m).map(d=>({d,rows:m[d]})))}catch(e){}refresh(extra)}
+function refresh(extra){DB=buildDB();const ds=Object.keys(DAYS).sort();
+ $("status").textContent=DB?`${DB.stocks.length} saham, ${DB.days} hari data (${fmtD(ds[0])} s/d ${fmtD(DB.last)})`+(extra||""):"Belum ada data.";render()}
+function bufToDays(buf,name){const u=new Uint8Array(buf);let aoa;
+ if(u[0]===80&&u[1]===75){const wb=XLSX.read(buf,{type:"array"});aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""})}
+ else aoa=textToAOA(new TextDecoder().decode(buf));
+ return toRows(aoa,(name.match(/(20\d{6})/)||[])[1]||null)}
+async function loadFolder(){
+ try{const r=await fetch("/api/files",{cache:"no-store"});if(!r.ok)throw new Error("x");const names=await r.json();
+  const add={};let n=0,gagal=0;
+  for(const nm of names){const d=(nm.match(/(20\d{6})/)||[])[1];
+   if(d&&DAYS[d]&&DAYS[d][0]&&DAYS[d][0].length>9)continue;
+   try{const rr=await fetch("/files/"+encodeURIComponent(nm));Object.assign(add,bufToDays(await rr.arrayBuffer(),nm));n++}catch(e){gagal++}}
+  if(n)await addDays(add,`, ${n} file baru dibaca dari folder`+(gagal?`, ${gagal} gagal`:""));
+  else if(!Object.keys(DAYS).length)$("status").textContent="Folder \"Ringkasan Saham\" kosong atau tidak ada file yang bisa dibaca."
+ }catch(e){$("status").textContent="Folder tidak terhubung. Jalankan serve.py lalu buka http://localhost:8000"}}
+["pMult","pLook","pPer","pMa1","pMa2","pDD","pMinVal","pHi","pLo","pArb","pTick","pChg","pWick","pMinK"].forEach(id=>$(id).oninput=render);
+
+
+idbAll().then(a=>{a.forEach(x=>DAYS[x.d]=x.rows)}).catch(()=>{}).then(()=>{refresh();loadFolder()});
+render();
+</script>
+</body>
+</html>
