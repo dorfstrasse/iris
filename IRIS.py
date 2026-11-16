@@ -5,6 +5,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
+import os
+import shutil
+import subprocess
+import sys
+
 BASE = Path(__file__).resolve().parent
 DATA = BASE / "Ringkasan_Saham"
 HTML = "IRIS.html"  # nama file IRIS
@@ -64,13 +69,34 @@ class Handler(SimpleHTTPRequestHandler):
         pass  # tidak perlu log tiap permintaan
 
 
+def buka_edge(url: str) -> bool:
+    """Buka url khusus di Microsoft Edge. Return False kalau Edge tidak ditemukan."""
+    if sys.platform.startswith("win"):
+        kandidat = [
+            shutil.which("msedge"),
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        ]
+        for k in kandidat:
+            if k and os.path.exists(k):
+                subprocess.Popen([k, url])
+                return True
+    elif sys.platform == "darwin":
+        return subprocess.run(["open", "-a", "Microsoft Edge", url]).returncode == 0
+    else:
+        for nama in ("microsoft-edge", "microsoft-edge-stable", "msedge"):
+            p = shutil.which(nama)
+            if p:
+                subprocess.Popen([p, url])
+                return True
+    return False
+
+
 if __name__ == "__main__":
     DATA.mkdir(exist_ok=True)
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)  # hanya bisa diakses dari komputer ini
     print(f"IRIS berjalan di http://localhost:{PORT}  (Ctrl+C untuk berhenti)")
     print(f"Folder data: {DATA}")
-    webbrowser.open(f"http://localhost:{PORT}")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
+    url = f"http://localhost:{PORT}"
+    if not buka_edge(url):
+        print(f"Microsoft Edge tidak ditemukan. Buka manual di Edge: {url}")
