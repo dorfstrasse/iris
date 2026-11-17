@@ -152,8 +152,8 @@ function analyze(s,p,hasValue,last){
 
 const base=p=>p.look===1?"volume hari sebelumnya":`rata-rata volume ${p.look} hari sebelumnya`;
 const DESC={
- marubozu:(l,p)=>`Saham yang naik lebih dari ${p.chgMin}% (${l}) dan memenuhi minimal ${Math.min(3,p.minK)} dari 3 kriteria: shadow atas \u2264 ${p.tick} tick dari High; Close > VWAP; Close = Bid.`,
- hammer:(l,p)=>`Saham dengan minimal ${Math.min(3,p.minK)} dari 3 kriteria (${l}): jarum bawah \u2265 ${p.wick}% dari range High\u2013Low (butuh Open Price); Close > VWAP; Close = Bid.`,
+ marubozu:(l,p)=>`Saham yang naik lebih dari ${p.chgMin}% (${l}) dan memenuhi minimal ${Math.min(2,p.minK)} dari 2 kriteria: shadow atas \u2264 ${p.tick} tick dari High; Close > VWAP. Close di Bid hanya ditandai Ya/Tidak.`,
+ hammer:(l,p)=>`Saham dengan minimal ${Math.min(2,p.minK)} dari 2 kriteria (${l}): jarum bawah \u2265 ${p.wick}% dari range High\u2013Low (butuh Open Price); Close > VWAP. Close di Bid hanya ditandai Ya/Tidak.`,
  arb:(l,p)=>`Saham yang ditutup di ARB tiga hari perdagangan berturut-turut (hingga ${l}). ARB dikenali bila Close = Low dan penurunan mencapai batas BEI pada tanggal itu ${p.arb>0?`(manual ${p.arb}%)`:"(otomatis: 15% sampai 18 Okt 2026, 7% 19 Okt–31 Des 2026, 35/25/20% sesuai rentang harga mulai 1 Jan 2027)"}.`,
  close:(l,p)=>`Saham yang memenuhi minimal satu dari empat kriteria penutupan (${l}). Selisih dalam poin persen terhadap harga sebelumnya. Dekat High: selisih ≤ ${p.hi}; Jauh dari Low: selisih ≥ ${p.lo}.`,
  today:(l,p)=>`Volume hari terakhir (${l}) ≥ ${p.mult}× ${base(p)}, dan harga lebih tinggi dari penutupan hari sebelumnya.`,
@@ -174,7 +174,7 @@ function select(rows,p){
 /* ---------- render ---------- */
 function render(){
  const tb=$("tabs");tb.innerHTML="";
- TABS.forEach(t=>{const b=document.createElement("button");b.className="tab";b.role="tab";b.textContent=t.label;b.setAttribute("aria-selected",t.id===tab);b.onclick=()=>{tab=t.id;sortKey=null;render()};tb.appendChild(b)});
+ TABS.forEach(t=>{const b=document.createElement("button");b.className="tab";b.role="tab";b.textContent=t.label;b.setAttribute("aria-selected",t.id===tab);b.onclick=()=>{tab=t.id;sortKey=null;try{localStorage.setItem("irisTab",tab)}catch(e){}render()};tb.appendChild(b)});
  const p=P();
  const head=$("tbl").tHead,body=$("tbl").tBodies[0];
  if(!DB){$("desc").textContent="";head.innerHTML="";body.innerHTML='<tr><td class="empty">Unggah atau tempel data harian saham, atau muat data contoh untuk mencoba.</td></tr>';return}

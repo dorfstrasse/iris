@@ -95,8 +95,12 @@ def buka_edge(url: str) -> bool:
 if __name__ == "__main__":
     DATA.mkdir(exist_ok=True)
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)  # hanya bisa diakses dari komputer ini
-    print(f"IRIS berjalan di http://localhost:{PORT}  (Ctrl+C untuk berhenti)")
-    print(f"Folder data: {DATA}")
     url = f"http://localhost:{PORT}"
+    print(f"IRIS berjalan di {url}  (Ctrl+C untuk berhenti)")
+    print(f"Folder data: {DATA}")
     if not buka_edge(url):
         print(f"Microsoft Edge tidak ditemukan. Buka manual di Edge: {url}")
+    try:
+        server.serve_forever()  # baris ini yang menjaga server tetap hidup
+    except KeyboardInterrupt:
+        print("\nIRIS dihentikan.")
