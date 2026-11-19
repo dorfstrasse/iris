@@ -17,6 +17,9 @@ PORT = 8000
 EXT = (".xlsx", ".xls", ".csv")
 
 
+WATCHLIST = BASE / "Watchlist.xlsx"
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE), **kwargs)
@@ -59,6 +62,12 @@ class Handler(SimpleHTTPRequestHandler):
             f = BASE / "images" / "white.png"
             if f.is_file():
                 self._kirim(f.read_bytes(), "image/png")
+            else:
+                self.send_error(404)
+
+        elif path == "/api/watchlist":
+            if WATCHLIST.is_file():
+                self._kirim(WATCHLIST.read_bytes(), "application/octet-stream")
             else:
                 self.send_error(404)
         
